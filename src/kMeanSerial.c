@@ -7,6 +7,10 @@
 #define K 64
 #define ITTERATIONS 20
 
+#define PATH_MAX 256
+#define INPUT "../images/"
+#define OUTPUT "../images/"
+
 typedef struct RGB_t {
 	unsigned int* R;
 	unsigned int* G;
@@ -39,7 +43,7 @@ void remodifyCentroids()
     int centroidR[K];
     int centroidG[K];
     int centroidB[K];
-    
+
     for(int i = 0; i < width * height;i++)
     {
         int index = centroidIndex[i];
@@ -64,11 +68,11 @@ void findBestCentroidFor(int pixelIndex)
     int r = imageIn[pixelIndex * 4];
     int g = imageIn[pixelIndex * 4 + 1];
     int b = imageIn[pixelIndex * 4 + 2];
-    
+
     for(int i = 0; i < K; i++)
     {
         razdalja = sqrt((centroids.R[i] - r) * (centroids.R[i] - r) + (centroids.G[i] - g) * (centroids.G[i] - g) + (centroids.B[i] - b) * (centroids.B[i] - b));
-        if (razdalja < min) 
+        if (razdalja < min)
         {
             min = razdalja;
             min_i = i;
@@ -79,7 +83,14 @@ void findBestCentroidFor(int pixelIndex)
 
 int main(void)
 {
-    FIBITMAP *imageBitmap = FreeImage_Load(FIF_PNG, "images/test.png", 0);
+    // Build input path
+    char inputPath[PATH_MAX];
+    strcpy(inputPath, INPUT);
+    strcat(inputPath, "test.png");  // TODO change to arg
+
+    printf("Loading image %s\n", inputPath);
+
+    FIBITMAP *imageBitmap = FreeImage_Load(FIF_PNG, inputPath, 0);
 	//Convert it to a 32-bit image
     FIBITMAP *imageBitmap32 = FreeImage_ConvertTo32Bits(imageBitmap);
 
@@ -91,21 +102,21 @@ int main(void)
     //Preapare room for a raw data copy of the image
     imageIn = (unsigned char *) malloc (height * pitch * sizeof(unsigned char));
     centroidIndex = (int *) malloc (width * height * sizeof(int));
-    
-    
+
+
     //Extract raw data from the image
 	FreeImage_ConvertToRawBits(imageIn, imageBitmap, pitch, 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
     centroids.R = (unsigned int*) malloc (K * sizeof(unsigned int));
     centroids.G = (unsigned int*) malloc (K * sizeof(unsigned int));
     centroids.B = (unsigned int*) malloc (K * sizeof(unsigned int));
-    
+
     initCentroids();
 
     for(int i = 0; i < ITTERATIONS;i++)
     {
         for(int j = 0; j < width * height; j++)
             findBestCentroidFor(j);
-        
+
         if(i < ITTERATIONS - 1)remodifyCentroids();
     }
 
@@ -114,17 +125,22 @@ int main(void)
     {
         imageIn[i * 4 + 0] = centroids.R[centroidIndex[i]];
         imageIn[i * 4 + 1] = centroids.G[centroidIndex[i]];
-        imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];  
+        imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];
     }
-    
+
+    // Build output path
+    char outputPath[PATH_MAX];
+    sprintf(outputPath, "%s%s%d.png", OUTPUT, "stisnjena", K);
+
+    printf("Saving image %s\n", outputPath);
 
     FIBITMAP *dst = FreeImage_ConvertFromRawBits(imageIn, width, height, pitch,
 		32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-	FreeImage_Save(FIF_PNG, dst, "stisnjena64.png", 0);
+	FreeImage_Save(FIF_PNG, dst, outputPath, 0);
 
     //Free source image data
 	FreeImage_Unload(imageBitmap32);
-	FreeImage_Unload(imageBitmap);  
+	FreeImage_Unload(imageBitmap);
 
 	free(imageIn);
 
