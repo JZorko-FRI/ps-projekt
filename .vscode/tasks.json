@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C: gcc build active file with libfreeimage",
+            "command": "/usr/bin/gcc",
+            "args": [
+                "${file}",
+                "-lm",
+                "-Wl,-rpath,./",
+                "-L./",
+                "-l:\"../bin/libfreeimage.so.3\"",
+                "-fdiagnostics-color=always",
+                "-o",
+                "${workspaceFolder}/bin/${fileBasenameNoExtension}"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "compiler: /usr/bin/gcc"
+        }
+    ]
+}
