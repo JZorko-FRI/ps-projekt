@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 #include "FreeImage.h"
 
-#define K 64
-#define ITTERATIONS 20
+#define K 64  // number of clusters
+#define ITERATIONS 20  //
 
 #define PATH_MAX 256
 #define INPUT "../images/"
@@ -37,6 +38,7 @@ void initCentroids()
         centroids.B[i] = imageIn[index * 4 + 2];
     }
 }
+
 void remodifyCentroids()
 {
     int centroidPopularity[K];
@@ -52,6 +54,7 @@ void remodifyCentroids()
         centroidG[index] += imageIn[i * 4 + 1];
         centroidB[index] += imageIn[i * 4 + 2];
     }
+
     for (int i = 0; i < K; i++)
     {
         centroids.R[i] = centroidR[i] / centroidPopularity[i];
@@ -59,6 +62,7 @@ void remodifyCentroids()
         centroids.B[i] = centroidB[i] / centroidPopularity[i];
     }
 }
+
 void findBestCentroidFor(int pixelIndex)
 {
     int min = INT32_MAX;
@@ -68,9 +72,15 @@ void findBestCentroidFor(int pixelIndex)
     int g = imageIn[pixelIndex * 4 + 1];
     int b = imageIn[pixelIndex * 4 + 2];
 
+
     for (int i = 0; i < K; i++)
     {
-        razdalja = sqrt((centroids.R[i] - r) * (centroids.R[i] - r) + (centroids.G[i] - g) * (centroids.G[i] - g) + (centroids.B[i] - b) * (centroids.B[i] - b));
+        int r2 = (centroids.R[i] - r) * (centroids.R[i] - r);
+        int g2 = (centroids.G[i] - g) * (centroids.G[i] - g);
+        int b2 = (centroids.B[i] - b) * (centroids.B[i] - b);
+
+        razdalja = sqrt(r2 + g2 + b2);
+
         if (razdalja < min)
         {
             min = razdalja;
@@ -86,6 +96,8 @@ int main(void)
     char inputPath[PATH_MAX];
     strcpy(inputPath, INPUT);
     strcat(inputPath, "test.png"); // TODO change to arg
+
+    // TODO K and INTERATIONS as args
 
     printf("Loading image %s\n", inputPath);
 
@@ -103,19 +115,23 @@ int main(void)
     centroidIndex = (int *)malloc(width * height * sizeof(int));
 
     //Extract raw data from the image
-    FreeImage_ConvertToRawBits(imageIn, imageBitmap, pitch, 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+    FreeImage_ConvertToRawBits(imageIn, imageBitmap, pitch, 32,
+            FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
     centroids.R = (unsigned int *)malloc(K * sizeof(unsigned int));
     centroids.G = (unsigned int *)malloc(K * sizeof(unsigned int));
     centroids.B = (unsigned int *)malloc(K * sizeof(unsigned int));
 
+    // Start timing execution
+    clock_t begin = clock();
+
     initCentroids();
 
-    for (int i = 0; i < ITTERATIONS; i++)
+    for (int i = 0; i < ITERATIONS; i++)
     {
         for (int j = 0; j < width * height; j++)
             findBestCentroidFor(j);
 
-        if (i < ITTERATIONS - 1)
+        if (i < ITERATIONS - 1)
             remodifyCentroids();
     }
 
@@ -126,14 +142,19 @@ int main(void)
         imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];
     }
 
+    // Stop timing execution
+    double time_spent = (double)(clock() - begin) / CLOCKS_PER_SEC;
+
+    printf("Processed in %.0fms\n", time_spent * 1000);
+
     // Build output path
     char outputPath[PATH_MAX];
-    sprintf(outputPath, "%s%s%d.png", OUTPUT, "stisnjena", K);
+    sprintf(outputPath, "%s%s_K%d_IT%d.png", OUTPUT, "stisnjena", K, ITERATIONS);  // TODO replace "stisnjena" with input name
 
     printf("Saving image %s\n", outputPath);
-
     FIBITMAP *dst = FreeImage_ConvertFromRawBits(imageIn, width, height, pitch,
-                                                 32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+            32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
+
     FreeImage_Save(FIF_PNG, dst, outputPath, 0);
 
     //Free source image data
