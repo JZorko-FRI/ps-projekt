@@ -8,6 +8,7 @@
             "args": [
                 "${file}",
                 "-lm",
+                "-fopenmp",
                 "-Wl,-rpath,./",
                 "-L./",
                 "-l:\"../bin/libfreeimage.so.3\"",
