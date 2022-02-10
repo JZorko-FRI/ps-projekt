@@ -7,12 +7,14 @@
 #include "FreeImage.h"
 
 #define K 64  // number of clusters
-#define ITERATIONS 20  // readjustments of centroids
+#define ITERATIONS 4  // readjustments of centroids
+
 #define THREADS 4
+#define WORKGROUP_SIZE 256
 
 #define PATH_MAX 256
-#define INPUT "../images/"
-#define OUTPUT "../images/"
+#define INPUT "./images/"
+#define OUTPUT "./images/"
 
 typedef struct RGB_t
 {
@@ -62,6 +64,7 @@ void remodifyCentroids()
     #pragma omp parallel for num_threads(THREADS)
     for (int i = 0; i < K; i++)
     {
+        // TODO fix division by zero
         centroids.R[i] = centroidR[i] / centroidPopularity[i];
         centroids.G[i] = centroidG[i] / centroidPopularity[i];
         centroids.B[i] = centroidB[i] / centroidPopularity[i];
@@ -93,6 +96,29 @@ void findBestCentroidFor(int pixelIndex)
         }
     }
     centroidIndex[pixelIndex] = min_i;
+}
+
+void compressImage()
+{
+    initCentroids();
+
+    for (int i = 0; i < ITERATIONS; i++)
+    {
+        #pragma omp parallel for schedule(dynamic) num_threads(THREADS)
+        for (int j = 0; j < width * height; j++)
+            findBestCentroidFor(j);
+
+        if (i < ITERATIONS - 1)
+            remodifyCentroids();
+    }
+
+    #pragma omp parallel for num_threads(THREADS)
+    for (int i = 0; i < width * height; i++)
+    {
+        imageIn[i * 4 + 0] = centroids.R[centroidIndex[i]];
+        imageIn[i * 4 + 1] = centroids.G[centroidIndex[i]];
+        imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];
+    }
 }
 
 int main(void)
@@ -129,25 +155,10 @@ int main(void)
     // Start timing execution
     clock_t begin = clock();
 
-    initCentroids();
+    printf("Compressing image...\n");
 
-    for (int i = 0; i < ITERATIONS; i++)
-    {
-        #pragma omp parallel for schedule(dynamic) num_threads(THREADS)
-        for (int j = 0; j < width * height; j++)
-            findBestCentroidFor(j);
-
-        if (i < ITERATIONS - 1)
-            remodifyCentroids();
-    }
-
-    #pragma omp parallel for num_threads(THREADS)
-    for (int i = 0; i < width * height; i++)
-    {
-        imageIn[i * 4 + 0] = centroids.R[centroidIndex[i]];
-        imageIn[i * 4 + 1] = centroids.G[centroidIndex[i]];
-        imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];
-    }
+    // Actual image compression
+    compressImage();
 
     // Stop timing execution
     double time_spent = (double)(clock() - begin) / CLOCKS_PER_SEC / THREADS;
