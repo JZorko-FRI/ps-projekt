@@ -9,15 +9,15 @@
                 "${file}",
                 "-lm",
                 "-fopenmp",
-                "-Wl,-rpath,./",
-                "-L./",
-                "-l:\"../bin/libfreeimage.so.3\"",
+                "-Wl,-rpath,'$ORIGIN'",
+                "-L../bin",
+                "-l:\"libfreeimage.so.3\"",
                 "-fdiagnostics-color=always",
                 "-o",
                 "${workspaceFolder}/bin/${fileBasenameNoExtension}"
             ],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}/bin"
             },
             "problemMatcher": [
                 "$gcc"
