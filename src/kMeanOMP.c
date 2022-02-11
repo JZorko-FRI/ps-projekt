@@ -7,14 +7,14 @@
 #include "FreeImage.h"
 
 #define K 64  // number of clusters
-#define ITERATIONS 4  // readjustments of centroids
+#define ITERATIONS 20  // readjustments of centroids
 
-#define THREADS 4
+#define THREADS 1
 #define WORKGROUP_SIZE 256
 
 #define PATH_MAX 256
-#define INPUT "./images/"
-#define OUTPUT "./images/"
+#define INPUT "../images/"
+#define OUTPUT "../images/"
 
 typedef struct RGB_t
 {
@@ -130,7 +130,7 @@ int main(void)
 
     // TODO K and INTERATIONS as args
 
-    printf("Loading image %s\n", inputPath);
+    // printf("Loading image %s\n", inputPath);
 
     FIBITMAP *imageBitmap = FreeImage_Load(FIF_PNG, inputPath, 0);
     //Convert it to a 32-bit image
@@ -155,7 +155,7 @@ int main(void)
     // Start timing execution
     clock_t begin = clock();
 
-    printf("Compressing image...\n");
+    // printf("Compressing image...\n");
 
     // Actual image compression
     compressImage();
@@ -163,13 +163,13 @@ int main(void)
     // Stop timing execution
     double time_spent = (double)(clock() - begin) / CLOCKS_PER_SEC / THREADS;
 
-    printf("Processed in %.0fms\n", time_spent * 1000);
+    printf("OMP\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, THREADS, time_spent * 1000);
 
     // Build output path
     char outputPath[PATH_MAX];
     sprintf(outputPath, "%s%s_K%d_IT%d.png", OUTPUT, "stisnjena", K, ITERATIONS);  // TODO replace "stisnjena" with input name
 
-    printf("Saving image %s\n", outputPath);
+    // printf("Saving image %s\n", outputPath);
     FIBITMAP *dst = FreeImage_ConvertFromRawBits(imageIn, width, height, pitch,
             32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
 

@@ -13,6 +13,7 @@
                 "-L'../lib'",
                 "-l:'libfreeimage.so.3'",
                 "-fopenmp",
+                "-O2",
                 "-o",
                 "${fileBasenameNoExtension}"
             ],
