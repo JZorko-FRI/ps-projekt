@@ -3,10 +3,11 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <stdbool.h>
 #include "FreeImage.h"
 
-#define K 64  // number of clusters
-#define ITERATIONS 20  //
+int K = 64;  // number of clusters
+int ITERATIONS = 20;  //
 
 #define PATH_MAX 256
 #define INPUT "../images/"
@@ -20,6 +21,7 @@ typedef struct RGB_t
     int centroidIndex;
 } RGB;
 
+bool *ignored;
 RGB centroids;
 int *centroidIndex;
 unsigned char *imageIn;
@@ -57,9 +59,15 @@ void remodifyCentroids()
 
     for (int i = 0; i < K; i++)
     {
-        centroids.R[i] = centroidR[i] / centroidPopularity[i];
-        centroids.G[i] = centroidG[i] / centroidPopularity[i];
-        centroids.B[i] = centroidB[i] / centroidPopularity[i];
+        if (centroidPopularity[i] != 0)
+        {
+            centroids.R[i] = centroidR[i] / centroidPopularity[i];
+            centroids.G[i] = centroidG[i] / centroidPopularity[i];
+            centroids.B[i] = centroidB[i] / centroidPopularity[i];
+        }
+        else {
+            ignored[i] = true;
+        }
     }
 }
 
@@ -75,6 +83,8 @@ void findBestCentroidFor(int pixelIndex)
 
     for (int i = 0; i < K; i++)
     {
+        if (ignored[i]) continue;
+
         int r2 = (centroids.R[i] - r) * (centroids.R[i] - r);
         int g2 = (centroids.G[i] - g) * (centroids.G[i] - g);
         int b2 = (centroids.B[i] - b) * (centroids.B[i] - b);
@@ -90,14 +100,49 @@ void findBestCentroidFor(int pixelIndex)
     centroidIndex[pixelIndex] = min_i;
 }
 
-int main(void)
+void compressImage()
 {
+    initCentroids();
+
+    for (int i = 0; i < ITERATIONS; i++)
+    {
+        for (int j = 0; j < width * height; j++)
+            findBestCentroidFor(j);
+
+        if (i < ITERATIONS - 1)
+            remodifyCentroids();
+    }
+
+    for (int i = 0; i < width * height; i++)
+    {
+        imageIn[i * 4 + 0] = centroids.R[centroidIndex[i]];
+        imageIn[i * 4 + 1] = centroids.G[centroidIndex[i]];
+        imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];
+    }
+}
+
+int main(int argc, char const *argv[])
+{
+    if (argc < 3)
+    {
+        printf("Usage: ./kMeanSerial <K> <ITERATIONS>\n");
+        return 1;
+    }
+
+    K = atoi(argv[1]);
+    ITERATIONS = atoi(argv[2]);
+
     // Build input path
     char inputPath[PATH_MAX];
     strcpy(inputPath, INPUT);
     strcat(inputPath, "test.png"); // TODO change to arg
 
-    // TODO K and INTERATIONS as args
+    // Prepare mask for ignored centroids
+    ignored = (bool *)malloc(K * sizeof(bool));
+    for (int i = 0; i < K; i++)
+    {
+        ignored[i] = false;
+    }
 
     // printf("Loading image %s\n", inputPath);
 
@@ -124,23 +169,7 @@ int main(void)
     // Start timing execution
     clock_t begin = clock();
 
-    initCentroids();
-
-    for (int i = 0; i < ITERATIONS; i++)
-    {
-        for (int j = 0; j < width * height; j++)
-            findBestCentroidFor(j);
-
-        if (i < ITERATIONS - 1)
-            remodifyCentroids();
-    }
-
-    for (int i = 0; i < width * height; i++)
-    {
-        imageIn[i * 4 + 0] = centroids.R[centroidIndex[i]];
-        imageIn[i * 4 + 1] = centroids.G[centroidIndex[i]];
-        imageIn[i * 4 + 2] = centroids.B[centroidIndex[i]];
-    }
+    compressImage();
 
     // Stop timing execution
     double time_spent = (double)(clock() - begin) / CLOCKS_PER_SEC;
