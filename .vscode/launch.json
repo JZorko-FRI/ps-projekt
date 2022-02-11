@@ -9,7 +9,11 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": [],
+            "args": [
+                "${input:k}",
+                "${input:iters}",
+                "${input:threads}"
+            ],
             "stopAtEntry": true,
             "cwd": "${fileDirname}",
             "environment": [],
@@ -24,6 +28,26 @@
             ],
             "preLaunchTask": "Build active file",
             "miDebuggerPath": "/usr/bin/gdb"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "k",
+            "type": "promptString",
+            "description": "K",
+            "default": "64"
+        },
+        {
+            "id": "iters",
+            "type": "promptString",
+            "description": "ITERATIONS",
+            "default": "20"
+        },
+        {
+            "id": "threads",
+            "type": "promptString",
+            "description": "THREADS",
+            "default": "4"
         }
     ]
 }
