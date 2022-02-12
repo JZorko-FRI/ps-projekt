@@ -33,7 +33,7 @@ int pitch = 0;
 
 void initCentroids()
 {
-    #pragma omp parallel for
+    // #pragma omp parallel for
     for (int i = 0; i < K; i++)
     {
         int index = rand() % (width * height);  // TODO thread safe
@@ -101,8 +101,6 @@ void findBestCentroidFor(int pixelIndex)
 
 void compressImage()
 {
-    initCentroids();
-
     for (int i = 0; i < ITERATIONS; i++)
     {
         #pragma omp parallel for
@@ -111,6 +109,8 @@ void compressImage()
 
         if (i < ITERATIONS - 1)
             remodifyCentroids();
+
+        // TODO could break out if centroids are not changing
     }
 
     #pragma omp parallel for
@@ -163,18 +163,19 @@ int main(int argc, char const *argv[])
     centroids.G = (unsigned int *)malloc(K * sizeof(unsigned int));
     centroids.B = (unsigned int *)malloc(K * sizeof(unsigned int));
 
-    // Start timing execution
-    clock_t begin = clock();
+    initCentroids();
 
-    // printf("Compressing image...\n");
+    // Start timing execution
+    double start = omp_get_wtime();
 
     // Actual image compression
     compressImage();
 
     // Stop timing execution
-    double time_spent = (double)(clock() - begin) / CLOCKS_PER_SEC / THREADS;
+    double seconds_spent = omp_get_wtime() - start;
 
-    printf("OMP\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, THREADS, time_spent * 1000);
+    // printf("OMP\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
+    printf("OMP\tO2\t%d\t%d\t%d\t%.0f\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
 
     // Build output path
     char outputPath[PATH_MAX];

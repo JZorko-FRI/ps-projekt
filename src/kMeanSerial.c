@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <omp.h>
 #include "FreeImage.h"
 
 int K = 64;  // number of clusters
@@ -95,8 +96,6 @@ void findBestCentroidFor(int pixelIndex)
 
 void compressImage()
 {
-    initCentroids();
-
     for (int i = 0; i < ITERATIONS; i++)
     {
         for (int j = 0; j < width * height; j++)
@@ -152,16 +151,18 @@ int main(int argc, char const *argv[])
     centroids.G = (unsigned int *)malloc(K * sizeof(unsigned int));
     centroids.B = (unsigned int *)malloc(K * sizeof(unsigned int));
 
+    initCentroids();
+
     // Start timing execution
-    clock_t begin = clock();
+    double start = omp_get_wtime();
 
     compressImage();
 
     // Stop timing execution
-    double time_spent = (double)(clock() - begin) / CLOCKS_PER_SEC;
+    double seconds_spent = omp_get_wtime() - start;
 
-    // printf("Processed in %.0fms\n", time_spent * 1000);
-    printf("Serial\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, 1, time_spent * 1000);
+    // printf("Processed in %.0fms\n", seconds_spent * 1000);
+    printf("Serial\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, 1, seconds_spent * 1000);
 
     // Build output path
     char outputPath[PATH_MAX];
