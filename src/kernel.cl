@@ -34,7 +34,7 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
     int groupId_j = get_group_id(1);
     
     int index = gid_i * width + gid_j;
-    int localIndex = lid_i * local_size + lid_j; //(gid_i % 16) * 16 + gid_j % 16;
+    int localIndex = lid_i * local_size + lid_j; 
     
     __local int centroids_sum[ K * 3 ];
     __local int centroids_popularity[ K ];
@@ -45,35 +45,37 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
     
     int bestCentroid = 0;
     int localValue = 0;
-    // za tocko (gid_i, gid_j) najdi najboljsi centroid
+
     barrier(CLK_GLOBAL_MEM_FENCE);
+    // za tocko (gid_i, gid_j) najdi najboljsi centroid
     if(gid_i < height && gid_j < width)
     {
         for(int i = 0; i < 20; i++)
         {
-            //reset vsot, ki pripadajo centroidu
+            //reset lokalne tabele vsota za delovno skupino
+            //izvede naj le nit v delovni skupini ki ima indeks manjsi od K * 3
             if (localIndex < K * 3) centroids_sum[localIndex] = 0;  
             
             barrier(CLK_GLOBAL_MEM_FENCE);
-
+            //za pixel ki pripada tej niti najdi najboljsi centroid v globalnem bufferju centroidov
             bestCentroid = findBestCentroidFor(r, g, b, centroids);
 
             barrier(CLK_GLOBAL_MEM_FENCE);
-
+            //reset lokalne tabele ki belezi koliko tock pripada kateremu centroidu
             if (localIndex < K) centroids_popularity[localIndex] = 0;  
             
             barrier(CLK_GLOBAL_MEM_FENCE);
-
+            //povecaj pripadnost centroidu z indexom bestCentroid za 1 - v LOKALNI tabeli
             atomic_inc(centroids_popularity + bestCentroid);
-            //atomic_inc(centroids_Gpopularity + bestCentroid);
-
+            //pristej vrednost vseh treh kanalov tega pixla v LOKALNO tabelo vsot
             atomic_add(centroids_sum + bestCentroid * 3 + 0, r);
             atomic_add(centroids_sum + bestCentroid * 3 + 1, g);
             atomic_add(centroids_sum + bestCentroid * 3 + 2, b);
 
-            //nastavi globalne vrednosti na 0
             barrier(CLK_GLOBAL_MEM_FENCE);
-
+            //tukaj se zacne delat na globalni ravni
+            //vrednosti v GLOBALNI tabeli vsot in tabeli popularnosti nastavit na 0
+            //to naj pocenjo nit z ustreznim indexom
             if(index < K * 3)
             {
                 centroids_Gsums[index] = 0;
@@ -81,7 +83,8 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
             }
 
             barrier(CLK_GLOBAL_MEM_FENCE);
-            
+            //naj prvih K * 3 niti znotraj delovne skupine vsaka pristeje eno vsoto v globalno tabelo
+            //prav tako naj pristeje tudi popularnost
             if (localIndex < K * 3) 
             {
                 localValue = centroids_sum[localIndex];
@@ -92,7 +95,8 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
             }
 
             barrier(CLK_GLOBAL_MEM_FENCE);
-            
+            //posodobi centroide
+            //ce gre za zadnjo iteracijo ne posodabljaj centroidov
             if(index < K * 3 && i < 19) 
             {
                 if (centroids_Gpopularity[index/3] > 0) centroids[index] = centroids_Gsums[index] / centroids_Gpopularity[index/3];
