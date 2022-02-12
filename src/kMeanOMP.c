@@ -4,7 +4,6 @@
 #include <math.h>
 #include <time.h>
 #include <omp.h>
-#include <stdbool.h>
 #include "FreeImage.h"
 
 int K = 64;  // number of clusters
@@ -24,7 +23,6 @@ typedef struct RGB_t
     int centroidIndex;
 } RGB;
 
-bool *ignored;
 RGB centroids;
 int *centroidIndex;
 unsigned char *imageIn;
@@ -52,7 +50,7 @@ void remodifyCentroids()
     int centroidG[K];
     int centroidB[K];
 
-    #pragma omp parallel for
+    #pragma omp parallel for reduction(+:centroidR[:K],centroidG[:K],centroidB[:K],centroidPopularity[:K])
     for (int i = 0; i < width * height; i++)
     {
         int index = centroidIndex[i];
@@ -71,17 +69,14 @@ void remodifyCentroids()
             centroids.G[i] = centroidG[i] / centroidPopularity[i];
             centroids.B[i] = centroidB[i] / centroidPopularity[i];
         }
-        else {
-            ignored[i] = true;
-        }
     }
 }
 
 void findBestCentroidFor(int pixelIndex)
 {
-    int min = INT32_MAX;
+    double min = INT32_MAX;
     int min_i = 0;
-    int razdalja = 0;
+    double razdalja = 0;
     int r = imageIn[pixelIndex * 4];
     int g = imageIn[pixelIndex * 4 + 1];
     int b = imageIn[pixelIndex * 4 + 2];
@@ -89,13 +84,11 @@ void findBestCentroidFor(int pixelIndex)
 
     for (int i = 0; i < K; i++)
     {
-        if (ignored[i]) continue;
-
         int r2 = (centroids.R[i] - r) * (centroids.R[i] - r);
         int g2 = (centroids.G[i] - g) * (centroids.G[i] - g);
         int b2 = (centroids.B[i] - b) * (centroids.B[i] - b);
 
-        razdalja = sqrt(r2 + g2 + b2);
+        razdalja = sqrt((double)(r2 + g2 + b2));
 
         if (razdalja < min)
         {
@@ -112,7 +105,7 @@ void compressImage()
 
     for (int i = 0; i < ITERATIONS; i++)
     {
-        // TODO multithread properly
+        #pragma omp parallel for
         for (int j = 0; j < width * height; j++)
             findBestCentroidFor(j);
 
@@ -120,7 +113,7 @@ void compressImage()
             remodifyCentroids();
     }
 
-    // TODO multithread properly
+    #pragma omp parallel for
     for (int i = 0; i < width * height; i++)
     {
         imageIn[i * 4 + 0] = centroids.R[centroidIndex[i]];
@@ -147,13 +140,6 @@ int main(int argc, char const *argv[])
     char inputPath[PATH_MAX];
     strcpy(inputPath, INPUT);
     strcat(inputPath, "test.png"); // TODO change to arg
-
-    // Prepare mask for ignored centroids
-    ignored = (bool *)malloc(K * sizeof(bool));
-    for (int i = 0; i < K; i++)
-    {
-        ignored[i] = false;
-    }
 
     // printf("Loading image %s\n", inputPath);
 
