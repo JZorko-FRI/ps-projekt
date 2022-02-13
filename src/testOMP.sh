@@ -5,12 +5,19 @@
 # Number of threads to test
 for t in 1 2 4 8 12 16 24 32 48 64
 do
-    # Repeat each configuration multiple times
-    echo Testing $t threads
-    for i in {1..10}
+    for k in 64
     do
-        echo -e "\tTrial $i"
-        srun --reservation=fri --constraint=AMD -c $t kMeanOMP 256 32 $t >> omp.tsv &
+        for iter in 20
+        do
+            srun \
+            --reservation=fri \
+            --constraint=AMD \
+            -c $t -n 10 -Q \
+            -o omp.tsv \
+            --open-mode=append \
+            kMeanSerial $k $iter $t &
+        done
     done
 done
-echo Done
+
+squeue --me
