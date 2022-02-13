@@ -15,3 +15,5 @@ do
           kMeanSerial $k $iter &
     done
 done
+
+squeue --me
