@@ -1,3 +1,4 @@
+Program	Optimization	K	Iterations	Workgroup	Time (ms)
 OCL	O2	16	20	256	659
 OCL	O2	16	20	256	652
 OCL	O2	16	20	256	690
