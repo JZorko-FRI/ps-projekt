@@ -1,5 +1,6 @@
 #define K 64
 
+
 int findBestCentroidFor(int r,int g, int b,__global unsigned char* centroids)
 {
     double min = 1.7976931348623157E+308;
@@ -23,21 +24,26 @@ int findBestCentroidFor(int r,int g, int b,__global unsigned char* centroids)
     }
     return min_i;
 }
-__kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned char* centroids,__global unsigned int* centroids_Gsums,__global unsigned int* centroids_Gpopularity,int height,int width)
+__kernel void kMeansAlgorithm(
+                        __global unsigned char* image, 
+                        __global unsigned char* centroids,
+                        __global unsigned int* centroids_Gsums,
+                        __global unsigned int* centroids_Gpopularity,
+                        __local unsigned int* centroids_Lsums,
+                        __local unsigned int* centroids_Lpopularity,
+                        int height,int width)
 {
     int gid_i = get_global_id(0);
-	int gid_j = get_global_id(1);
+	//int gid_j = get_global_id(1);
     int lid_i = get_local_id(0);
-	int lid_j = get_local_id(1);
-    int local_size = get_local_size(1);
+	//int lid_j = get_local_id(1);
+    int local_size = get_local_size(0);
     int groupId_i = get_group_id(0);
-    int groupId_j = get_group_id(1);
-    
-    int index = gid_i * width + gid_j;
-    int localIndex = lid_i * local_size + lid_j; 
-    
-    __local int centroids_sum[ K * 3 ];
-    __local int centroids_popularity[ K ];
+    //int groupId_j = get_group_id(1);
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    int index = gid_i;      // * width + gid_j;
+    int localIndex = lid_i; // * local_size + lid_j; 
     
     int r = image[index * 4 + 0];
     int g = image[index * 4 + 1];
@@ -46,15 +52,15 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
     int bestCentroid = 0;
     int localValue = 0;
 
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    
     // za tocko (gid_i, gid_j) najdi najboljsi centroid
-    if(gid_i < height && gid_j < width)
+    if(index < (width - 1) * (height - 1))
     {
         for(int i = 0; i < 20; i++)
         {
             //reset lokalne tabele vsota za delovno skupino
             //izvede naj le nit v delovni skupini ki ima indeks manjsi od K * 3
-            if (localIndex < K * 3) centroids_sum[localIndex] = 0;  
+            if (localIndex < K * 3) centroids_Lsums[localIndex] = 0;  
             
             barrier(CLK_GLOBAL_MEM_FENCE);
             //za pixel ki pripada tej niti najdi najboljsi centroid v globalnem bufferju centroidov
@@ -62,15 +68,15 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
 
             barrier(CLK_GLOBAL_MEM_FENCE);
             //reset lokalne tabele ki belezi koliko tock pripada kateremu centroidu
-            if (localIndex < K) centroids_popularity[localIndex] = 0;  
+            if (localIndex < K) centroids_Lpopularity[localIndex] = 0;  
             
             barrier(CLK_GLOBAL_MEM_FENCE);
             //povecaj pripadnost centroidu z indexom bestCentroid za 1 - v LOKALNI tabeli
-            atomic_inc(centroids_popularity + bestCentroid);
+            atomic_inc(centroids_Lpopularity + bestCentroid);
             //pristej vrednost vseh treh kanalov tega pixla v LOKALNO tabelo vsot
-            atomic_add(centroids_sum + bestCentroid * 3 + 0, r);
-            atomic_add(centroids_sum + bestCentroid * 3 + 1, g);
-            atomic_add(centroids_sum + bestCentroid * 3 + 2, b);
+            atomic_add(centroids_Lsums + bestCentroid * 3 + 0, r);
+            atomic_add(centroids_Lsums + bestCentroid * 3 + 1, g);
+            atomic_add(centroids_Lsums + bestCentroid * 3 + 2, b);
 
             barrier(CLK_GLOBAL_MEM_FENCE);
             //tukaj se zacne delat na globalni ravni
@@ -87,10 +93,10 @@ __kernel void kMeansAlgorithm(__global unsigned char* image, __global unsigned c
             //prav tako naj pristeje tudi popularnost
             if (localIndex < K * 3) 
             {
-                localValue = centroids_sum[localIndex];
+                localValue = centroids_Lsums[localIndex];
                 atomic_add(centroids_Gsums + localIndex, localValue);
                 
-                localValue = centroids_popularity[localIndex];
+                localValue = centroids_Lpopularity[localIndex];
                 if (localIndex < K) atomic_add(centroids_Gpopularity + localIndex,localValue);
             }
 

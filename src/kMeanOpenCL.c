@@ -7,7 +7,7 @@
 #include <string.h>
 
 
-#define WORKGROUP_SIZE	16
+#define WORKGROUP_SIZE	256
 #define MAX_SOURCE_SIZE	16384
 
 #define PATH_MAX 256
@@ -112,10 +112,13 @@ int main()
 
 	// Delitev dela
 	// pri
-	size_t local_item_size[2] = {WORKGROUP_SIZE, WORKGROUP_SIZE};
-	size_t num_groups[2] = {((height - 1) / local_item_size[0] + 1), ((width - 1) / local_item_size[1] + 1)};
-	size_t global_item_size[2] = {num_groups[0] * local_item_size[0], num_groups[1] * local_item_size[1]};
+	//size_t local_item_size[2] = {WORKGROUP_SIZE, WORKGROUP_SIZE};
+	//size_t num_groups[2] = {((height - 1) / local_item_size[0] + 1), ((width - 1) / local_item_size[1] + 1)};
+	//size_t global_item_size[2] = {num_groups[0] * local_item_size[0], num_groups[1] * local_item_size[1]};
 
+    size_t local_item_size = WORKGROUP_SIZE;
+	size_t num_groups = (height * width - 1) / (local_item_size + 1);
+	size_t global_item_size = num_groups * local_item_size;
 
     // Alokacija pomnilnika na napravi
 	// to ni vec potrebno
@@ -161,13 +164,15 @@ int main()
     ret |= clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&centroids_mem_obj);
     ret |= clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&centroids_sums);
     ret |= clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *)&centroids_popularity);
-    ret |= clSetKernelArg(kernel, 4, sizeof(cl_int), (void *)&height);
-    ret |= clSetKernelArg(kernel, 5, sizeof(cl_int), (void *)&width);
+    ret |= clSetKernelArg(kernel, 4, K * 3 * sizeof(unsigned int), NULL);	
+    ret |= clSetKernelArg(kernel, 5, K * sizeof(unsigned int), NULL);		
+    ret |= clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&height);
+    ret |= clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&width);
 			// "s"cepec, "stevilka argumenta, velikost podatkov, kazalec na podatke
 	double dt = omp_get_wtime();
 	// "s"cepec: zagon
-    ret = clEnqueueNDRangeKernel(command_queue, kernel, 2, NULL,
-								 global_item_size, local_item_size, 0, NULL, NULL);
+    ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL,
+								 &global_item_size, &local_item_size, 0, NULL, NULL);
 			// vrsta, "s"cepec, dimenzionalnost, mora biti NULL,
 			// kazalec na "stevilo vseh niti, kazalec na lokalno "stevilo niti,
 			// dogodki, ki se morajo zgoditi pred klicem
@@ -177,7 +182,6 @@ int main()
 							  4 * width * height * sizeof(unsigned char), imageIn, 0, NULL, NULL);
 			// branje v pomnilnik iz naparave, 0 = offset
 			// zadnji trije - dogodki, ki se morajo zgoditi prej
-
     dt = omp_get_wtime() - dt;
 	printf("Cas: %lf\n", dt);
     pitch = ((32 * width + 31) / 32) * 4;
@@ -194,6 +198,9 @@ int main()
     ret = clReleaseProgram(program);
     ret = clReleaseMemObject(image_mem_obj);
     ret = clReleaseMemObject(centroids_mem_obj);
+    ret = clReleaseMemObject(centroids_sums);
+    ret = clReleaseMemObject(centroids_popularity);
+    
 
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
