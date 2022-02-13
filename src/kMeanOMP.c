@@ -6,10 +6,10 @@
 #include <omp.h>
 #include "FreeImage.h"
 
-int K = 64;  // number of clusters
-int ITERATIONS = 20;  // readjustments of centroids
+int K;  // number of clusters
+int ITERATIONS;  // readjustments of centroids
 
-int THREADS = 1;
+int THREADS;
 
 #define PATH_MAX 256
 #define INPUT "../images/"
@@ -45,10 +45,10 @@ void initCentroids()
 
 void remodifyCentroids()
 {
-    int centroidPopularity[K];
-    int centroidR[K];
-    int centroidG[K];
-    int centroidB[K];
+    int *centroidPopularity = (int *)calloc(K, sizeof(int));
+    int *centroidR = (int *)calloc(K, sizeof(int));
+    int *centroidG = (int *)calloc(K, sizeof(int));
+    int *centroidB = (int *)calloc(K, sizeof(int));
 
     #pragma omp parallel for reduction(+:centroidR[:K],centroidG[:K],centroidB[:K],centroidPopularity[:K])
     for (int i = 0; i < width * height; i++)
@@ -60,6 +60,10 @@ void remodifyCentroids()
         centroidB[index] += imageIn[i * 4 + 2];
     }
 
+    free(centroidR);
+    free(centroidG);
+    free(centroidB);
+
     #pragma omp parallel for
     for (int i = 0; i < K; i++)
     {
@@ -70,10 +74,14 @@ void remodifyCentroids()
             centroids.B[i] = centroidB[i] / centroidPopularity[i];
         }
     }
+
+    free(centroidPopularity);
 }
 
 void findBestCentroidFor(int pixelIndex)
 {
+
+
     double min = INT32_MAX;
     int min_i = 0;
     double razdalja = 0;
@@ -103,7 +111,7 @@ void compressImage()
 {
     for (int i = 0; i < ITERATIONS; i++)
     {
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic)
         for (int j = 0; j < width * height; j++)
             findBestCentroidFor(j);
 
@@ -175,7 +183,7 @@ int main(int argc, char const *argv[])
     double seconds_spent = omp_get_wtime() - start;
 
     // printf("OMP\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
-    printf("OMP\tO2\t%d\t%d\t%d\t%.0f\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
+    printf("OMP\tO3\t%d\t%d\t%d\t%.0f\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
 
     // Build output path
     char outputPath[PATH_MAX];
