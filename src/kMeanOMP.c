@@ -149,7 +149,7 @@ int main(int argc, char const *argv[])
     // Build input path
     char inputPath[PATH_MAX];
     strcpy(inputPath, INPUT);
-    strcat(inputPath, "test.png"); // TODO change to arg
+    strcat(inputPath, "test.png");
 
     // printf("Loading image %s\n", inputPath);
 
@@ -185,7 +185,7 @@ int main(int argc, char const *argv[])
     double seconds_spent = omp_get_wtime() - start;
 
     // printf("OMP\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
-    printf("OMP\tO3\t%d\t%d\t%d\t%.0f\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
+    printf("OMP\tO2\t%d\t%d\t%d\t%.0f\n", K, ITERATIONS, THREADS, seconds_spent * 1000);
 
     // Build output path
     char outputPath[PATH_MAX];
