@@ -162,7 +162,7 @@ int main(int argc, char const *argv[])
     double seconds_spent = omp_get_wtime() - start;
 
     // printf("Processed in %.0fms\n", seconds_spent * 1000);
-    printf("Serial\tO2\t%dK\t%dI\t%dT\t%.0fms\n", K, ITERATIONS, 1, seconds_spent * 1000);
+    printf("Serial\tO2\t%d\t%d\t%d\t%.0f\n", K, ITERATIONS, 1, seconds_spent * 1000);
 
     // Build output path
     char outputPath[PATH_MAX];

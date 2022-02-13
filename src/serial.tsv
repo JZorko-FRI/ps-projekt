@@ -1,0 +1,26 @@
+Program	Optimization	K	Iterations	Threads	Time (ms)
+Serial	O2	64	20	1	12542
+Serial	O2	64	20	1	10745
+Serial	O2	64	20	1	10805
+Serial	O2	64	20	1	10775
+Serial	O2	64	20	1	10738
+Serial	O2	64	20	1	12502
+Serial	O2	64	20	1	10784
+Serial	O2	64	20	1	13193
+Serial	O2	64	20	1	10693
+Serial	O2	64	20	1	11046
+Serial	O2	64	20	1	11196
+Serial	O2	64	20	1	11752
+Serial	O2	64	20	1	13232
+Serial	O2	64	20	1	11691
+Serial	O2	64	20	1	12538
+Serial	O2	64	20	1	12638
+Serial	O2	64	20	1	12204
+Serial	O2	64	20	1	12736
+Serial	O2	64	20	1	13272
+Serial	O2	64	20	1	11054
+Serial	O2	64	20	1	11543
+Serial	O2	64	20	1	11854
+Serial	O2	64	20	1	11920
+Serial	O2	64	20	1	12189
+Serial	O2	64	20	1	12304
