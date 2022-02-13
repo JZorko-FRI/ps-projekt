@@ -39,13 +39,13 @@ void readImage()
 {
     char inputPath[PATH_MAX];
     strcpy(inputPath, INPUT);
-    strcat(inputPath, "test_4K.png"); // TODO change to arg
+    strcat(inputPath, "test_4K.jpg"); // TODO change to arg
 
     // TODO K and INTERATIONS as args
 
     //printf("Loading image %s\n", inputPath);
 
-    FIBITMAP *imageBitmap = FreeImage_Load(FIF_PNG, inputPath, 0);
+    FIBITMAP *imageBitmap = FreeImage_Load(FIF_JPEG, inputPath, 0);
     //Convert it to a 32-bit image
     FIBITMAP *imageBitmap32 = FreeImage_ConvertTo32Bits(imageBitmap);
 
