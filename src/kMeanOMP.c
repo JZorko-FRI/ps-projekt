@@ -33,10 +33,9 @@ int pitch = 0;
 
 void initCentroids()
 {
-    // #pragma omp parallel for
     for (int i = 0; i < K; i++)
     {
-        int index = rand() % (width * height);  // TODO thread safe
+        int index = rand() % (width * height);
         centroids.R[i] = imageIn[index * 4];
         centroids.G[i] = imageIn[index * 4 + 1];
         centroids.B[i] = imageIn[index * 4 + 2];
@@ -50,7 +49,10 @@ void remodifyCentroids()
     int *centroidG = (int *)calloc(K, sizeof(int));
     int *centroidB = (int *)calloc(K, sizeof(int));
 
-    #pragma omp parallel for reduction(+:centroidR[:K],centroidG[:K],centroidB[:K],centroidPopularity[:K])
+    #pragma omp parallel for \
+            reduction(+: \
+                centroidR[:K], centroidG[:K], \
+                centroidB[:K],centroidPopularity[:K])
     for (int i = 0; i < width * height; i++)
     {
         int index = centroidIndex[i];
