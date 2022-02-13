@@ -14,7 +14,8 @@
 #define INPUT "../images/"
 #define OUTPUT "../images/"
 
-#define K 64
+int K = 256;
+int ITTERATIONS = 20;
 
 unsigned char *imageIn;     //pointer to image
 unsigned char *centroids;   //pointer to centroids array
@@ -38,11 +39,11 @@ void readImage()
 {
     char inputPath[PATH_MAX];
     strcpy(inputPath, INPUT);
-    strcat(inputPath, "test.png"); // TODO change to arg
+    strcat(inputPath, "test_4K.png"); // TODO change to arg
 
     // TODO K and INTERATIONS as args
 
-    printf("Loading image %s\n", inputPath);
+    //printf("Loading image %s\n", inputPath);
 
     FIBITMAP *imageBitmap = FreeImage_Load(FIF_PNG, inputPath, 0);
     //Convert it to a 32-bit image
@@ -58,10 +59,13 @@ void readImage()
     FreeImage_ConvertToRawBits(imageIn, imageBitmap, pitch, 32,
             FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
 }
-int main()
+int main(int argc, char* argv[])
 {
     readImage();
     initCentroids();
+    K = atoi(argv[1]);
+    ITTERATIONS = atoi(argv[2]);
+
     FILE *fp;
     char *source_str;
     size_t source_size;
@@ -110,8 +114,7 @@ int main()
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id[0], 0, &ret);
 			// kontekst, naprava, INORDER/OUTOFORDER, napake
 
-	// Delitev dela
-	// pri
+	// Delitev dela 2D nacin
 	//size_t local_item_size[2] = {WORKGROUP_SIZE, WORKGROUP_SIZE};
 	//size_t num_groups[2] = {((height - 1) / local_item_size[0] + 1), ((width - 1) / local_item_size[1] + 1)};
 	//size_t global_item_size[2] = {num_groups[0] * local_item_size[0], num_groups[1] * local_item_size[1]};
@@ -150,7 +153,7 @@ int main()
 	build_log =(char *) malloc (sizeof(char)*(build_log_len+1));
 	ret = clGetProgramBuildInfo(program, device_id[0], CL_PROGRAM_BUILD_LOG,
 							    build_log_len, build_log, NULL);
-	printf("%s\n", build_log);
+	//printf("%s\n", build_log);
 	free(build_log);
 	if(build_log_len > 2)
 		return 1;
@@ -168,6 +171,9 @@ int main()
     ret |= clSetKernelArg(kernel, 5, K * sizeof(unsigned int), NULL);		
     ret |= clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&height);
     ret |= clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&width);
+    ret |= clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&K);
+    ret |= clSetKernelArg(kernel, 9, sizeof(cl_int), (void *)&ITTERATIONS);
+    
 			// "s"cepec, "stevilka argumenta, velikost podatkov, kazalec na podatke
 	double dt = omp_get_wtime();
 	// "s"cepec: zagon
@@ -183,12 +189,18 @@ int main()
 			// branje v pomnilnik iz naparave, 0 = offset
 			// zadnji trije - dogodki, ki se morajo zgoditi prej
     dt = omp_get_wtime() - dt;
-	printf("Cas: %lf\n", dt);
+	//printf("Cas: %lf\n", dt);
     pitch = ((32 * width + 31) / 32) * 4;
+
+    printf("OCL\tO2\t%d\t%d\t%d\t%.0f\n", K, ITTERATIONS, WORKGROUP_SIZE, dt * 1000);
+
 
     FIBITMAP *dst = FreeImage_ConvertFromRawBits(imageIn, width, height, pitch,
 		32, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, TRUE);
-	FreeImage_Save(FIF_PNG, dst, "testnaCL.png", 0);
+
+    char outputPath[PATH_MAX];
+    sprintf(outputPath, "%s%s_K%d_IT%d.png", OUTPUT, "stisnjena", K, ITTERATIONS);
+	FreeImage_Save(FIF_PNG, dst, outputPath, 0);
 
 	//printHistogram(H);
     // "ci"s"cenje
@@ -201,7 +213,6 @@ int main()
     ret = clReleaseMemObject(centroids_sums);
     ret = clReleaseMemObject(centroids_popularity);
     
-
     ret = clReleaseCommandQueue(command_queue);
     ret = clReleaseContext(context);
 

@@ -1,4 +1,6 @@
 images/*
+!images/test_4K.jpg
+!images/test_8K.jpg
 !images/test.png
 src/kMeanSerial
 src/kMeanOMP
